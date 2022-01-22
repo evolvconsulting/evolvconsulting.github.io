@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/">
+  <channel>
+    <title>Posts on evolv technology blog</title>
+    <link>https://evolvconsulting.github.io/posts/</link>
+    <description>Recent content in Posts on evolv technology blog</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-us</language>
+    <lastBuildDate>Sat, 15 Jan 2022 09:16:26 -0600</lastBuildDate><atom:link href="https://evolvconsulting.github.io/posts/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Secure YAML Pipelines in Azure Dev Ops</title>
+      <link>https://evolvconsulting.github.io/posts/jkososki/ado-secure-yaml/</link>
+      <pubDate>Sat, 15 Jan 2022 09:16:26 -0600</pubDate>
+      
+      <guid>https://evolvconsulting.github.io/posts/jkososki/ado-secure-yaml/</guid>
+      <description>Let’s talk about YAML pipelines in Azure DevOps. YAML pipelines are great! Using YAML pipelines in Azure DevOps allows deployment pipelines to be expressed as code. Expressing pipelines as code simplifies the use of version control to support build &amp;amp; release pipelines. It also allows DevOps professionals to create libraries of pipeline code that can be reused to accelerate new tasks. All of this is great, but it is also important to ensure that pipelines are secure.</description>
+    </item>
+    
+    <item>
+      <title></title>
+      <link>https://evolvconsulting.github.io/posts/jkososki/readme/</link>
+      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+      
+      <guid>https://evolvconsulting.github.io/posts/jkososki/readme/</guid>
+      <description></description>
+    </item>
+    
+  </channel>
+</rss>
