@@ -2,6 +2,12 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
   xmlns:xhtml="http://www.w3.org/1999/xhtml">
   <url>
+    <loc>https://evolvconsulting.github.io/authors/jason-kososki/</loc>
+    <lastmod>2022-01-15T09:16:26-06:00</lastmod>
+  </url><url>
+    <loc>https://evolvconsulting.github.io/authors/</loc>
+    <lastmod>2022-01-15T09:16:26-06:00</lastmod>
+  </url><url>
     <loc>https://evolvconsulting.github.io/categories/</loc>
     <lastmod>2022-01-15T09:16:26-06:00</lastmod>
   </url><url>
@@ -23,7 +29,7 @@
     <loc>https://evolvconsulting.github.io/tags/secure/</loc>
     <lastmod>2022-01-15T09:16:26-06:00</lastmod>
   </url><url>
-    <loc>https://evolvconsulting.github.io/posts/jkososki/ado-secure-yaml/</loc>
+    <loc>https://evolvconsulting.github.io/posts/jason-kososki/ado-secure-yaml/</loc>
     <lastmod>2022-01-15T09:16:26-06:00</lastmod>
   </url><url>
     <loc>https://evolvconsulting.github.io/tags/</loc>
@@ -31,8 +37,6 @@
   </url><url>
     <loc>https://evolvconsulting.github.io/tags/yaml/</loc>
     <lastmod>2022-01-15T09:16:26-06:00</lastmod>
-  </url><url>
-    <loc>https://evolvconsulting.github.io/posts/jkososki/readme/</loc>
   </url><url>
     <loc>https://evolvconsulting.github.io/archives/</loc>
   </url><url>
