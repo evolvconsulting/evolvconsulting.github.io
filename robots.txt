@@ -1,3 +1,4 @@
 User-agent: *
-Disallow:
+Disallow: /tags/
+Disallow: /categories/
 Sitemap: https://evolvconsulting.github.io/sitemap.xml
