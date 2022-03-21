@@ -6,7 +6,18 @@
     <description>Recent content on evolv technology blog</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
-    <lastBuildDate>Sat, 15 Jan 2022 09:16:26 -0600</lastBuildDate><atom:link href="https://evolvconsulting.github.io/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Sun, 20 Mar 2022 12:32:00 -0600</lastBuildDate><atom:link href="https://evolvconsulting.github.io/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Adding dbt to your Fivetran pipeline</title>
+      <link>https://evolvconsulting.github.io/posts/ben-jenkins/fivetran-dbt-snowflake-tutorial1/</link>
+      <pubDate>Sun, 20 Mar 2022 12:32:00 -0600</pubDate>
+      
+      <guid>https://evolvconsulting.github.io/posts/ben-jenkins/fivetran-dbt-snowflake-tutorial1/</guid>
+      <description>Money ball - Sabermetrics, you too can analyze data…  I wanted to write a blog to demonstrate the power of integrating dbt within Fivetran to load data into Snowflake. So, I thought about what data is freely available and decided that rather than one more analysis of pandemic data I&amp;rsquo;d prefer to focus on the upcoming baseball season.
+ Fig 1: Our Pipeline Software Stack  
+Assumptions for running this tutorial</description>
+    </item>
+    
     <item>
       <title>Secure YAML Pipelines in Azure Dev Ops</title>
       <link>https://evolvconsulting.github.io/posts/jason-kososki/ado-secure-yaml/</link>

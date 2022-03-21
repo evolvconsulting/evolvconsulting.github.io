@@ -1,0 +1,461 @@
+<!doctype html><html lang=en dir=auto>
+<head><meta charset=utf-8>
+<meta http-equiv=x-ua-compatible content="IE=edge">
+<meta name=viewport content="width=device-width,initial-scale=1,shrink-to-fit=no">
+<meta name=robots content="index, follow">
+<title>Adding dbt to your Fivetran pipeline | evolv technology blog</title>
+<meta name=keywords content="Fivetran,dbt,Snowflake,ELT">
+<meta name=description content="Money ball - Sabermetrics, you too can analyze data…  I wanted to write a blog to demonstrate the power of integrating dbt within Fivetran to load data into Snowflake. So, I thought about what data is freely available and decided that rather than one more analysis of pandemic data I&rsquo;d prefer to focus on the upcoming baseball season.
+ Fig 1: Our Pipeline Software Stack  
+Assumptions for running this tutorial">
+<meta name=author content="Ben Jenkins">
+<link rel=canonical href=https://evolvconsulting.github.io/posts/ben-jenkins/fivetran-dbt-snowflake-tutorial1/>
+<link crossorigin=anonymous href=/assets/css/stylesheet.min.20a7459af446d3fcafb0e778850e7ca77261a185310b2874eda5f3c47063c250.css integrity="sha256-IKdFmvRG0/yvsOd4hQ58p3JhoYUxCyh07aXzxHBjwlA=" rel="preload stylesheet" as=style>
+<script defer crossorigin=anonymous src=/assets/js/highlight.min.7680afc38aa6b15ddf158a4f3780b7b1f7dde7e91d26f073e6229bb7a0793c92.js integrity="sha256-doCvw4qmsV3fFYpPN4C3sffd5+kdJvBz5iKbt6B5PJI=" onload=hljs.initHighlightingOnLoad()></script>
+<link rel=icon href=https://evolvconsulting.github.io/favicon.ico>
+<link rel=icon type=image/png sizes=16x16 href=https://evolvconsulting.github.io/favicon-16x16.png>
+<link rel=icon type=image/png sizes=32x32 href=https://evolvconsulting.github.io/favicon-32x32.png>
+<link rel=apple-touch-icon href=https://evolvconsulting.github.io/apple-touch-icon.png>
+<link rel=mask-icon href=https://evolvconsulting.github.io/safari-pinned-tab.svg>
+<meta name=theme-color content="#2e2e33">
+<meta name=msapplication-TileColor content="#2e2e33">
+<meta name=generator content="Hugo 0.91.2">
+<noscript>
+<style>#theme-toggle,.top-link{display:none}</style>
+<style>@media(prefers-color-scheme:dark){:root{--theme:rgb(29, 30, 32);--entry:rgb(46, 46, 51);--primary:rgb(218, 218, 219);--secondary:rgb(155, 156, 157);--tertiary:rgb(65, 66, 68);--content:rgb(196, 196, 197);--hljs-bg:rgb(46, 46, 51);--code-bg:rgb(55, 56, 62);--border:rgb(51, 51, 51)}.list{background:var(--theme)}.list:not(.dark)::-webkit-scrollbar-track{background:0 0}.list:not(.dark)::-webkit-scrollbar-thumb{border-color:var(--theme)}}</style>
+</noscript><meta property="og:title" content="Adding dbt to your Fivetran pipeline">
+<meta property="og:description" content="Money ball - Sabermetrics, you too can analyze data…  I wanted to write a blog to demonstrate the power of integrating dbt within Fivetran to load data into Snowflake. So, I thought about what data is freely available and decided that rather than one more analysis of pandemic data I&rsquo;d prefer to focus on the upcoming baseball season.
+ Fig 1: Our Pipeline Software Stack  
+Assumptions for running this tutorial">
+<meta property="og:type" content="article">
+<meta property="og:url" content="https://evolvconsulting.github.io/posts/ben-jenkins/fivetran-dbt-snowflake-tutorial1/">
+<meta property="og:image" content="https://evolvconsulting.github.io/im/image.jpg"><meta property="article:section" content="posts">
+<meta property="article:published_time" content="2022-03-20T12:32:00-06:00">
+<meta property="article:modified_time" content="2022-03-20T12:32:00-06:00">
+<meta name=twitter:card content="summary_large_image">
+<meta name=twitter:image content="https://evolvconsulting.github.io/im/image.jpg">
+<meta name=twitter:title content="Adding dbt to your Fivetran pipeline">
+<meta name=twitter:description content="Money ball - Sabermetrics, you too can analyze data…  I wanted to write a blog to demonstrate the power of integrating dbt within Fivetran to load data into Snowflake. So, I thought about what data is freely available and decided that rather than one more analysis of pandemic data I&rsquo;d prefer to focus on the upcoming baseball season.
+ Fig 1: Our Pipeline Software Stack  
+Assumptions for running this tutorial">
+<script type=application/ld+json>{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":2,"name":"Posts","item":"https://evolvconsulting.github.io/posts/"},{"@type":"ListItem","position":3,"name":"Adding dbt to your Fivetran pipeline","item":"https://evolvconsulting.github.io/posts/ben-jenkins/fivetran-dbt-snowflake-tutorial1/"}]}</script>
+<script type=application/ld+json>{"@context":"https://schema.org","@type":"BlogPosting","headline":"Adding dbt to your Fivetran pipeline","name":"Adding dbt to your Fivetran pipeline","description":"Money ball - Sabermetrics, you too can analyze data…  I wanted to write a blog to demonstrate the power of integrating dbt within Fivetran to load data into Snowflake. So, I thought about what data is freely available and decided that rather than one more analysis of pandemic data I\u0026rsquo;d prefer to focus on the upcoming baseball season.\n Fig 1: Our Pipeline Software Stack  \nAssumptions for running this tutorial","keywords":["Fivetran","dbt","Snowflake","ELT"],"articleBody":"Money ball - Sabermetrics, you too can analyze data…  I wanted to write a blog to demonstrate the power of integrating dbt within Fivetran to load data into Snowflake. So, I thought about what data is freely available and decided that rather than one more analysis of pandemic data I’d prefer to focus on the upcoming baseball season.\n Fig 1: Our Pipeline Software Stack  \nAssumptions for running this tutorial\n This post demonstrates how to create a data pipeline for using Fivetran, Snowflake, dbt and git. As such, you will need have the following to do this tutorial:\n  A Snowflake account to use as a target data connection. You can get a free trial here: Snowflake Signup\n  A Fivetran account. You can get a 14 day trial here: Fivetran Signup\n  You will need dbt core installed locally. Here are instructions for setting it up: dbt setup\n  You will need a git account of some sort.\nYou can sign up for a free github account: Github Signup\n  Play Ball Baseball data background… “blah blah blog”\n A quick Google search on free data helped me find this site: Baseball Archive Statistics Where I downloaded the baseball databank from here: Baseball Databank And extracted into separate google sheets:\n Fig 2: Data stored in Google Sheets - the folders  \n Fig 3: Data stored in Google Sheets - the files  \nSample of batting statistics:\n Fig 4: Baseball Data  \nAnd the data contains definitions in this readme.\nreadme:2.9 BattingPost table yearID Year round Level of playoffs playerID Player ID code teamID Team lgID League G Games AB At Bats R Runs H Hits 2B Doubles 3B Triples HR Homeruns RBI Runs Batted In SB Stolen Bases CS Caught stealing BB Base on Balls SO Strikeouts IBB Intentional walks HBP Hit by pitch SH Sacrifices SF Sacrifice flies GIDP Grounded into double plays Batter up We are going to create a table in Fivetran using the BattingPost google sheet loaded previously.\nAdding your first connector (this step depends on having setup the Fivetran User with the appropriate privileges in Snowflake).\n  \nIn Select your data source Search for Google and select Google Sheets. Click Continue Setup:\n  \nOn the Google Sheets page enter the following:\nDestination schema: `baseball_data` Destination table: `batting_post` Authentication Method: choose Authorize Service Account Sheet URL: https://docs.google.com/spreadsheets/d/1GYIaA0CXFx88wH8CgwMQcRYCN8YxiX_-y8YTeN-VUg4/edit#gid=2089050719 You may have to scroll down to see the Find Sheet button. Click on it and you should find DATA in the Named Range drop down.\n  \nThen click 'Save and Test':   \nYou should see this if everything is successful:\n  \nClick Select your data to continue.\nYou should get a warning for starting to do the initial sync. As this is public data it is not a concern. But be mindful of your company’s data governance policies for your production environment. Click start initial sync:\n  \nThis launched the first sync and by default set the next one to 6 hours:\n  \nIn Snowflake, we can see that the schema BASEBALL_DATA was created along with the BATTING_POST table and FIVETRAN_AUDIT table.\n  \nWe can preview the data and see that it loaded as expected:   \nThose column names are ugly though. We could probably make them look better with human readable names.\nWe can transform the data within Fivetran. And, we have choices. We can use Fivetran’s Transformations or we can use dbt from within Fivetran. First, from within Fivetran on the left hand navigation choose Transformations:\n  \nThen select Try dbt Transformations (you will authorize your github repo to be used by Fivetran)\n  \nClick to Enable dbt Transformations then you will be presented with this requirement to proceed:\n  \nI hadn’t setup a repo previously, so I chose Help me set up my dbt project.\nThis brings you to this page which is pretty self explanatory: Transformations for dbt Core Setup Guide\nThe notes I’ll add are here:\n  From the prerequisites you’ll need to install dbt.\n  I’ve found this helpful for setting the dbt grants in Snowflake.\n  You can skip Step 1 and begin with Step 2 - Create a new repository.\n**I have a github account and am going to add a repo to it.\n  Step 3 doesn’t mention adding the Snowflake database info. But, you’ll need to know info to setup your profile:\n    \nWhen I completed the Transformations for dbt Core Setup Guide I got the following error:\n  \ndbt project sync has failed deployment.yml file not found. Make sure that the deployment.yml and dbt_project.yml files are present in the same folder.\nI didn’t see in setup or pre-requisites an example of adding the deployments.yml file. Here is a link to a sample from Fivetran.\nI chose to create a job that runs every 5 minutes while developing and unit testing and then change the schedule after that to less frequent:\n  \nWith this being setup dbt has a job that will rebuild the existing models that are setup in the project:\n  \nBut, we haven't started using dbt to work on the baseball data. We’ll start transforming our BATTING_POST data.\nLetting dbeaver generate and format a select statement gives a query that is not nice to look at:\n\tSELECT \"_ROW\", BB, AB, LG_ID, G, H, IBB, HR, YEAR_ID, \"_3_B\", SB, GIDP, \"_2_B\", CS, R, SF, ROUND, SH, TEAM_ID, HBP, RBI, SO, PLAYER_ID, \"_FIVETRAN_SYNCED\" FROM FIVETRAN_DATABASE.BASEBALL_DATA.BATTING_POST;  This should only persist in a raw area. Let’s create a model to clean it up.\nUsing the data dictionary we can produce a better looking query to use in our staging model.\n  \nAnd along with the new sources file src_baseball_data.yml.\n  \nWe should be ready to use dbt compile to execute our code.\n  \nDbt run completes successfully:\n  \nAnd in Snowflake this shows us that we have human readable data. But, we haven’t shown that Fivetran added the data. With successful runs of the same data, I added time to the job. Now, I want to make sure that Fivetran is executing the run and not my command line. So, I drop the view.\n  \nAnd update the schedule to run on the 5's again.\nIt completes successfully:   \nAnd the view has been rebuilt by dbt.\n  \nSummary In this tutorial we’ve just begun to see how Fivetran can be integrated to use dbt within its pipelines.\nEvolv consulting has experts in each of the technologies discussed here as well as many others to assist you in building out your modern Cloud Data Solutions. Contact us today for assistance.\n","wordCount":"1055","inLanguage":"en","image":"https://evolvconsulting.github.io/im/image.jpg","datePublished":"2022-03-20T12:32:00-06:00","dateModified":"2022-03-20T12:32:00-06:00","mainEntityOfPage":{"@type":"WebPage","@id":"https://evolvconsulting.github.io/posts/ben-jenkins/fivetran-dbt-snowflake-tutorial1/"},"publisher":{"@type":"Organization","name":"evolv technology blog","logo":{"@type":"ImageObject","url":"https://evolvconsulting.github.io/favicon.ico"}}}</script>
+</head>
+<body id=top>
+<script>localStorage.getItem("pref-theme")==="dark"?document.body.classList.add('dark'):localStorage.getItem("pref-theme")==="light"?document.body.classList.remove('dark'):window.matchMedia('(prefers-color-scheme: dark)').matches&&document.body.classList.add('dark')</script>
+<header class=header>
+<nav class=nav>
+<div class=logo>
+<a href=https://evolvconsulting.github.io accesskey=h title="evolv technology blog (Alt + H)">evolv technology blog</a>
+<span class=logo-switches>
+<button id=theme-toggle accesskey=t title="(Alt + T)"><svg id="moon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentcolor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg><svg id="sun" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentcolor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+</button>
+</span>
+</div>
+<ul id=menu>
+<li>
+<a href=https://evolvconsulting.github.io/archives title=Archive>
+<span>Archive</span>
+</a>
+</li>
+<li>
+<a href=https://evolvconsulting.github.io/categories/ title=Categories>
+<span>Categories</span>
+</a>
+</li>
+<li>
+<a href=https://evolvconsulting.github.io/search/ title="Search (Alt + /)" accesskey=/>
+<span>Search</span>
+</a>
+</li>
+<li>
+<a href=https://evolvconsulting.github.io/tags/ title=Tags>
+<span>Tags</span>
+</a>
+</li>
+</ul>
+</nav>
+</header>
+<main class=main>
+<article class=post-single>
+<header class=post-header>
+<div class=breadcrumbs><a href=https://evolvconsulting.github.io>Home</a>&nbsp;»&nbsp;<a href=https://evolvconsulting.github.io/posts/>Posts</a></div>
+<h1 class=post-title>
+Adding dbt to your Fivetran pipeline
+</h1>
+<div class=post-meta><span title="2022-03-20 12:32:00 -0600 -0600">March 20, 2022</span>&nbsp;·&nbsp;5 min&nbsp;·&nbsp;Ben Jenkins
+</div>
+</header>
+<figure class=entry-cover><img loading=lazy src=https://evolvconsulting.github.io/im/image.jpg alt>
+</figure><div class=toc>
+<details>
+<summary accesskey=c title="(Alt + C)">
+<span class=details>Table of Contents</span>
+</summary>
+<div class=inner><ul>
+<li>
+<a href=#money-ball---sabermetrics-you-too-can-analyze-data-br aria-label="Money ball - Sabermetrics, you too can analyze data… ">Money ball - Sabermetrics, you too can analyze data… <br></a><ul>
+<li>
+<a href=#assumptions-for-running-this-tutorialbr aria-label="Assumptions for running this tutorial
+">Assumptions for running this tutorial<br></a></li></ul>
+</li>
+<li>
+<a href=#play-ball aria-label="Play Ball">Play Ball</a><ul>
+<li>
+<a href=#baseball-data-background-blah-blah-blogbr aria-label="Baseball data background… &amp;ldquo;blah blah blog&amp;rdquo;
+">Baseball data background… &ldquo;blah blah blog&rdquo;<br></a></li>
+<li>
+<a href=#batter-up aria-label="Batter up">Batter up</a></li>
+<li>
+<a href=#summary aria-label=Summary>Summary</a>
+</li>
+</ul>
+</li>
+</ul>
+</div>
+</details>
+</div>
+<div class=post-content><h1 id=money-ball---sabermetrics-you-too-can-analyze-data-br>Money ball - Sabermetrics, you too can analyze data… <br><a hidden class=anchor aria-hidden=true href=#money-ball---sabermetrics-you-too-can-analyze-data-br>#</a></h1>
+<p>I wanted to write a blog to demonstrate the power of integrating dbt within Fivetran to load data into Snowflake. So, I thought about what data is freely available and decided that rather than one more analysis of pandemic data I&rsquo;d prefer to focus on the upcoming baseball season.</p>
+<figure style=max-width:80%;text-align:center;margin-left:auto;margin-right:auto>
+<img src=img/4_logos.png alt=site-image title=site-image>
+<figcaption>
+Fig 1: Our Pipeline Software Stack
+</figcaption>
+</figure><br><br>
+<h2 id=assumptions-for-running-this-tutorialbr>Assumptions for running this tutorial<br><a hidden class=anchor aria-hidden=true href=#assumptions-for-running-this-tutorialbr>#</a></h2>
+<p>This post demonstrates how to create a data pipeline for using <b>Fivetran, Snowflake, dbt and git</b>.
+As such, you will need have the following to do this tutorial:</p>
+<ol>
+<li>
+<p>A Snowflake account to use as a target data connection. <br>
+You can get a free trial here: <a href=https://signup.snowflake.com/>Snowflake Signup</a></p>
+</li>
+<li>
+<p>A Fivetran account. <br>
+You can get a 14 day trial here: <a href=https://fivetran.com/signup>Fivetran Signup</a></p>
+</li>
+<li>
+<p>You will need dbt core installed locally. <br>
+Here are instructions for setting it up: <a href=https://docs.getdbt.com/dbt-cli/installation>dbt setup</a></p>
+</li>
+<li>
+<p>You will need a git account of some sort.<br>
+You can sign up for a free github account: <a href=https://github.com/signup?>Github Signup</a></p>
+</li>
+</ol>
+<h1 id=play-ball>Play Ball<a hidden class=anchor aria-hidden=true href=#play-ball>#</a></h1>
+<h2 id=baseball-data-background-blah-blah-blogbr>Baseball data background… &ldquo;blah blah blog&rdquo;<br><a hidden class=anchor aria-hidden=true href=#baseball-data-background-blah-blah-blogbr>#</a></h2>
+<p>A quick Google search on free data helped me find this site: <a href=https://www.seanlahman.com/baseball-archive/statistics>Baseball Archive Statistics</a> <br>
+Where I downloaded the baseball databank from here: <a href=https://github.com/chadwickbureau/baseballdatabank/archive/refs/tags/v2022.2.zip>Baseball Databank</a> <br></p>
+<p>And extracted into separate google sheets:</p>
+<figure style=max-width:80%;text-align:center;margin-left:auto;margin-right:auto>
+<img src=img/mydrivegooglesheets.png alt=site-image title=site-image>
+<figcaption>
+Fig 2: Data stored in Google Sheets - the folders
+</figcaption>
+</figure><br>
+<figure style=max-width:80%;text-align:center;margin-left:auto;margin-right:auto>
+<img src=img/mydrivegooglesheets2.png alt=site-image title=site-image>
+<figcaption>
+Fig 3: Data stored in Google Sheets - the files
+</figcaption>
+</figure><br>
+<p>Sample of batting statistics:</p>
+<figure style=max-width:80%;text-align:center;margin-left:auto;margin-right:auto>
+<img src=img/mydrivegooglesheets3.png alt=site-image title=site-image>
+<figcaption>
+Fig 4: Baseball Data
+</figcaption>
+</figure><br>
+<p>And the data contains definitions in this <a href=https://www.seanlahman.com/files/database/readme2021.txt>readme</a>.</p>
+<pre tabindex=0><code>readme:2.9  BattingPost table
+
+yearID         Year
+round          Level of playoffs 
+playerID       Player ID code
+teamID         Team
+lgID           League
+G              Games
+AB             At Bats
+R              Runs
+H              Hits
+2B             Doubles
+3B             Triples
+HR             Homeruns
+RBI            Runs Batted In
+SB             Stolen Bases
+CS             Caught stealing
+BB             Base on Balls
+SO             Strikeouts
+IBB            Intentional walks
+HBP            Hit by pitch
+SH             Sacrifices
+SF             Sacrifice flies
+GIDP           Grounded into double plays
+</code></pre><h2 id=batter-up>Batter up<a hidden class=anchor aria-hidden=true href=#batter-up>#</a></h2>
+<p>We are going to create a table in Fivetran using the BattingPost google sheet loaded previously.</p>
+<p>Adding your first connector (this step depends on having setup the Fivetran User with the appropriate privileges in Snowflake).</p>
+<figure style=max-width:80%;text-align:center;margin-left:auto;margin-right:auto>
+<img src=img/fivetran1.png alt=site-image title=site-image>
+<figcaption>
+</figcaption>
+</figure><br>
+<p>In <code>Select your data source</code> Search for Google and select Google Sheets. Click Continue Setup:</p>
+<figure style=max-width:80%;text-align:center;margin-left:auto;margin-right:auto>
+<img src=img/fivetran2.png alt=site-image title=site-image>
+<figcaption>
+</figcaption>
+</figure><br>
+<p>On the Google Sheets page enter the following:</p>
+<pre tabindex=0><code>Destination schema: `baseball_data`
+Destination table: `batting_post`
+Authentication Method: choose Authorize Service Account
+Sheet URL: https://docs.google.com/spreadsheets/d/1GYIaA0CXFx88wH8CgwMQcRYCN8YxiX_-y8YTeN-VUg4/edit#gid=2089050719
+</code></pre><p>You may have to scroll down to see the <code>Find Sheet</code> button. Click on it and you should find <code>DATA</code> in the <code>Named Range</code> drop down.</p>
+<figure style=max-width:80%;text-align:center;margin-left:auto;margin-right:auto>
+<img src=img/fivetran4.png alt=site-image title=site-image>
+<figcaption>
+</figcaption>
+</figure><br>Then click 'Save and Test':
+<figure style=max-width:80%;text-align:center;margin-left:auto;margin-right:auto>
+<img src=img/fivetran3.png alt=site-image title=site-image>
+<figcaption>
+</figcaption>
+</figure><br>
+<p>You should see this if everything is successful:</p>
+<figure style=max-width:80%;text-align:center;margin-left:auto;margin-right:auto>
+<img src=img/fivetran5.png alt=site-image title=site-image>
+<figcaption>
+</figcaption>
+</figure><br>
+<p>Click <code>Select your data</code> to continue.</p>
+<p>You should get a warning for starting to do the initial sync. As this is public data it is not a concern. But be mindful of your company&rsquo;s data governance policies for your production environment. Click start initial sync:</p>
+<figure style=max-width:80%;text-align:center;margin-left:auto;margin-right:auto>
+<img src=img/fivetran6.png alt=site-image title=site-image>
+<figcaption>
+</figcaption>
+</figure><br>
+<p>This launched the first sync and by default set the next one to 6 hours:</p>
+<figure style=max-width:80%;text-align:center;margin-left:auto;margin-right:auto>
+<img src=img/fivetran7.png alt=site-image title=site-image>
+<figcaption>
+</figcaption>
+</figure><br>
+<p>In Snowflake, we can see that the schema BASEBALL_DATA was created along with the BATTING_POST table and FIVETRAN_AUDIT table.</p>
+<figure style=max-width:80%;text-align:center;margin-left:auto;margin-right:auto>
+<img src=img/fivetran8.png alt=site-image title=site-image>
+<figcaption>
+</figcaption>
+</figure><br>
+We can preview the data and see that it loaded as expected:
+<figure style=max-width:80%;text-align:center;margin-left:auto;margin-right:auto>
+<img src=img/fivetran9.png alt=site-image title=site-image>
+<figcaption>
+</figcaption>
+</figure><br>
+<p>Those column names are ugly though. We could probably make them look better with human readable names.</p>
+<p>We can transform the data within Fivetran. And, we have choices. We can use Fivetran&rsquo;s Transformations or we can use dbt from within Fivetran.
+First, from within Fivetran on the left hand navigation choose <code>Transformations</code>:</p>
+<figure style=max-width:80%;text-align:center;margin-left:auto;margin-right:auto>
+<img src=img/fivetran10.png alt=site-image title=site-image>
+<figcaption>
+</figcaption>
+</figure><br>
+<p>Then select <code>Try dbt Transformations</code> (you will authorize your github repo to be used by Fivetran)</p>
+<figure style=max-width:80%;text-align:center;margin-left:auto;margin-right:auto>
+<img src=img/fivetran11.png alt=site-image title=site-image>
+<figcaption>
+</figcaption>
+</figure><br>
+<p>Click to <code>Enable dbt Transformations</code> then you will be presented with this requirement to proceed:</p>
+<figure style=max-width:80%;text-align:center;margin-left:auto;margin-right:auto>
+<img src=img/fivetran12.png alt=site-image title=site-image>
+<figcaption>
+</figcaption>
+</figure><br>
+<p>I hadn&rsquo;t setup a repo previously, so I chose <code>Help me set up my dbt project</code>.</p>
+<p>This brings you to this page which is pretty self explanatory: <a href=https://fivetran.com/docs/transformations/dbt/setup-guide#createnewgitrepository>Transformations for dbt Core Setup Guide</a><br>
+The notes I&rsquo;ll add are here:<br></p>
+<ol>
+<li>
+<p>From the prerequisites you&rsquo;ll need to <a href=https://docs.getdbt.com/dbt-cli/installation>install dbt</a>.</p>
+</li>
+<li>
+<p>I&rsquo;ve found this helpful for setting the <a href=https://discourse.getdbt.com/t/setting-up-snowflake-the-exact-grant-statements-we-run/439>dbt grants in Snowflake</a>.</p>
+</li>
+<li>
+<p>You can skip Step 1 and begin with Step 2 - Create a new repository.</p>
+<p>**I have a github account and am going to add a repo to it.</p>
+</li>
+<li>
+<p>Step 3 doesn&rsquo;t mention adding the Snowflake database info. But, you&rsquo;ll need to know info to setup your profile:</p>
+</li>
+</ol>
+<figure style=max-width:80%;text-align:center;margin-left:auto;margin-right:auto>
+<img src=img/fivetran13.png alt=site-image title=site-image>
+<figcaption>
+</figcaption>
+</figure><br>
+<p>When I completed the <a href=https://fivetran.com/docs/transformations/dbt/setup-guide#writedbtjobs>Transformations for dbt Core Setup Guide</a> I got the following error:</p>
+<figure style=max-width:80%;text-align:center;margin-left:auto;margin-right:auto>
+<img src=img/fivetran13-2.png alt=site-image title=site-image>
+<figcaption>
+</figcaption>
+</figure><br>
+<p>dbt project sync has failed
+deployment.yml file not found. Make sure that the deployment.yml and dbt_project.yml files are present in the same folder.</p>
+<p>I didn&rsquo;t see in setup or pre-requisites an example of adding the deployments.yml file. Here is a link to a sample from Fivetran.</p>
+<p>I chose to create a job that runs every 5 minutes while developing and unit testing and then change the schedule after that to less frequent:</p>
+<figure style=max-width:80%;text-align:center;margin-left:auto;margin-right:auto>
+<img src=img/fivetran14.png alt=site-image title=site-image>
+<figcaption>
+</figcaption>
+</figure><br>
+<p>With this being setup dbt has a job that will rebuild the existing models that are setup in the project:</p>
+<figure style=max-width:80%;text-align:center;margin-left:auto;margin-right:auto>
+<img src=img/fivetran15.png alt=site-image title=site-image>
+<figcaption>
+</figcaption>
+</figure><br>
+But, we haven't started using dbt to work on the baseball data.
+<p>We&rsquo;ll start transforming our BATTING_POST data.</p>
+<p>Letting dbeaver generate and format a select statement gives a query that is not nice to look at:</p>
+<pre><code>	SELECT
+		&quot;_ROW&quot;,
+		BB,
+		AB,
+		LG_ID,
+		G,
+		H,
+		IBB,
+		HR,
+		YEAR_ID,
+		&quot;_3_B&quot;,
+		SB,
+		GIDP,
+		&quot;_2_B&quot;,
+		CS,
+		R,
+		SF,
+		ROUND,
+		SH,
+		TEAM_ID,
+		HBP,
+		RBI,
+		SO,
+		PLAYER_ID,
+		&quot;_FIVETRAN_SYNCED&quot;
+	FROM
+		FIVETRAN_DATABASE.BASEBALL_DATA.BATTING_POST;
+</code></pre>
+<p>This should only persist in a raw area. Let&rsquo;s create a model to clean it up.</p>
+<p>Using the <a href=https://www.seanlahman.com/files/database/readme2021.txt>data dictionary</a> we can produce a better looking query to use in our staging model.</p>
+<figure style=max-width:80%;text-align:center;margin-left:auto;margin-right:auto>
+<img src=img/fivetran16.png alt=site-image title=site-image>
+<figcaption>
+</figcaption>
+</figure><br>
+<p>And along with the new sources file <b>src_baseball_data.yml</b>.</p>
+<figure style=max-width:80%;text-align:center;margin-left:auto;margin-right:auto>
+<img src=img/fivetran17.png alt=site-image title=site-image>
+<figcaption>
+</figcaption>
+</figure><br>
+<p>We should be ready to use dbt compile to execute our code.</p>
+<figure style=max-width:80%;text-align:center;margin-left:auto;margin-right:auto>
+<img src=img/fivetran18.png alt=site-image title=site-image>
+<figcaption>
+</figcaption>
+</figure><br>
+<p>Dbt run completes successfully:</p>
+<figure style=max-width:80%;text-align:center;margin-left:auto;margin-right:auto>
+<img src=img/fivetran19.png alt=site-image title=site-image>
+<figcaption>
+</figcaption>
+</figure><br>
+<p>And in Snowflake this shows us that we have human readable data. But, we haven&rsquo;t shown that Fivetran added the data. With successful runs of the same data, I added time to the job. Now, I want to make sure that Fivetran is executing the run and not my command line. So, I drop the view.</p>
+<figure style=max-width:80%;text-align:center;margin-left:auto;margin-right:auto>
+<img src=img/fivetran20.png alt=site-image title=site-image>
+<figcaption>
+</figcaption>
+</figure><br>
+And update the schedule to run on the 5's again.<br>
+It completes successfully:
+<figure style=max-width:80%;text-align:center;margin-left:auto;margin-right:auto>
+<img src=img/fivetran21.png alt=site-image title=site-image>
+<figcaption>
+</figcaption>
+</figure><br>
+<p>And the view has been rebuilt by dbt.</p>
+<figure style=max-width:80%;text-align:center;margin-left:auto;margin-right:auto>
+<img src=img/fivetran22.png alt=site-image title=site-image>
+<figcaption>
+</figcaption>
+</figure><br>
+<h2 id=summary>Summary<a hidden class=anchor aria-hidden=true href=#summary>#</a></h2>
+<p>In this tutorial we&rsquo;ve just begun to see how Fivetran can be integrated to use dbt within its pipelines.</p>
+<p>Evolv consulting has experts in each of the technologies discussed here as well as many others to assist you in building out your modern Cloud Data Solutions. Contact us today for assistance.</p>
+</div>
+<footer class=post-footer>
+<div class=attribution>
+<h2>About the author</h2>
+<figure>
+<img src alt>
+<figcaption>
+<p>
+</p>
+<p>
+<a href=https://evolvconsulting.github.io/authors/ben-jenkins/ class=block-link>
+More about Ben Jenkins
+</a>
+</p>
+</figcaption>
+</figure>
+</div>
+<ul class=post-tags>
+<li><a href=https://evolvconsulting.github.io/tags/fivetran/>Fivetran</a></li>
+<li><a href=https://evolvconsulting.github.io/tags/dbt/>dbt</a></li>
+<li><a href=https://evolvconsulting.github.io/tags/snowflake/>Snowflake</a></li>
+<li><a href=https://evolvconsulting.github.io/tags/elt/>ELT</a></li>
+</ul>
+<nav class=paginav>
+<a class=next href=https://evolvconsulting.github.io/posts/jason-kososki/ado-secure-yaml/>
+<span class=title>Next Page »</span>
+<br>
+<span>Secure YAML Pipelines in Azure Dev Ops</span>
+</a>
+</nav>
+<div class=share-buttons>
+<a target=_blank rel="noopener noreferrer" aria-label="share Adding dbt to your Fivetran pipeline on twitter" href="https://twitter.com/intent/tweet/?text=Adding%20dbt%20to%20your%20Fivetran%20pipeline&url=https%3a%2f%2fevolvconsulting.github.io%2fposts%2fben-jenkins%2ffivetran-dbt-snowflake-tutorial1%2f&hashtags=Fivetran%2cdbt%2cSnowflake%2cELT"><svg viewBox="0 0 512 512"><path d="M449.446.0C483.971.0 512 28.03 512 62.554v386.892C512 483.97 483.97 512 449.446 512H62.554c-34.524.0-62.554-28.03-62.554-62.554V62.554c0-34.524 28.029-62.554 62.554-62.554h386.892zM195.519 424.544c135.939.0 210.268-112.643 210.268-210.268.0-3.218.0-6.437-.153-9.502 14.406-10.421 26.973-23.448 36.935-38.314-13.18 5.824-27.433 9.809-42.452 11.648 15.326-9.196 26.973-23.602 32.49-40.92-14.252 8.429-30.038 14.56-46.896 17.931-13.487-14.406-32.644-23.295-53.946-23.295-40.767.0-73.87 33.104-73.87 73.87.0 5.824.613 11.494 1.992 16.858-61.456-3.065-115.862-32.49-152.337-77.241-6.284 10.881-9.962 23.601-9.962 37.088.0 25.594 13.027 48.276 32.95 61.456-12.107-.307-23.448-3.678-33.41-9.196v.92c0 35.862 25.441 65.594 59.311 72.49-6.13 1.686-12.72 2.606-19.464 2.606-4.751.0-9.348-.46-13.946-1.38 9.349 29.426 36.628 50.728 68.965 51.341-25.287 19.771-57.164 31.571-91.8 31.571-5.977.0-11.801-.306-17.625-1.073 32.337 21.15 71.264 33.41 112.95 33.41z"/></svg>
+</a>
+<a target=_blank rel="noopener noreferrer" aria-label="share Adding dbt to your Fivetran pipeline on linkedin" href="https://www.linkedin.com/shareArticle?mini=true&url=https%3a%2f%2fevolvconsulting.github.io%2fposts%2fben-jenkins%2ffivetran-dbt-snowflake-tutorial1%2f&title=Adding%20dbt%20to%20your%20Fivetran%20pipeline&summary=Adding%20dbt%20to%20your%20Fivetran%20pipeline&source=https%3a%2f%2fevolvconsulting.github.io%2fposts%2fben-jenkins%2ffivetran-dbt-snowflake-tutorial1%2f"><svg viewBox="0 0 512 512"><path d="M449.446.0C483.971.0 512 28.03 512 62.554v386.892C512 483.97 483.97 512 449.446 512H62.554c-34.524.0-62.554-28.03-62.554-62.554V62.554c0-34.524 28.029-62.554 62.554-62.554h386.892zM160.461 423.278V197.561h-75.04v225.717h75.04zm270.539.0V293.839c0-69.333-37.018-101.586-86.381-101.586-39.804.0-57.634 21.891-67.617 37.266v-31.958h-75.021c.995 21.181.0 225.717.0 225.717h75.02V297.222c0-6.748.486-13.492 2.474-18.315 5.414-13.475 17.767-27.434 38.494-27.434 27.135.0 38.007 20.707 38.007 51.037v120.768H431zM123.448 88.722C97.774 88.722 81 105.601 81 127.724c0 21.658 16.264 39.002 41.455 39.002h.484c26.165.0 42.452-17.344 42.452-39.002-.485-22.092-16.241-38.954-41.943-39.002z"/></svg>
+</a>
+<a target=_blank rel="noopener noreferrer" aria-label="share Adding dbt to your Fivetran pipeline on reddit" href="https://reddit.com/submit?url=https%3a%2f%2fevolvconsulting.github.io%2fposts%2fben-jenkins%2ffivetran-dbt-snowflake-tutorial1%2f&title=Adding%20dbt%20to%20your%20Fivetran%20pipeline"><svg viewBox="0 0 512 512"><path d="M449.446.0C483.971.0 512 28.03 512 62.554v386.892C512 483.97 483.97 512 449.446 512H62.554c-34.524.0-62.554-28.03-62.554-62.554V62.554c0-34.524 28.029-62.554 62.554-62.554h386.892zM446 265.638c0-22.964-18.616-41.58-41.58-41.58-11.211.0-21.361 4.457-28.841 11.666-28.424-20.508-67.586-33.757-111.204-35.278l18.941-89.121 61.884 13.157c.756 15.734 13.642 28.29 29.56 28.29 16.407.0 29.706-13.299 29.706-29.701.0-16.403-13.299-29.702-29.706-29.702-11.666.0-21.657 6.792-26.515 16.578l-69.105-14.69c-1.922-.418-3.939-.042-5.585 1.036-1.658 1.073-2.811 2.761-3.224 4.686l-21.152 99.438c-44.258 1.228-84.046 14.494-112.837 35.232-7.468-7.164-17.589-11.591-28.757-11.591-22.965.0-41.585 18.616-41.585 41.58.0 16.896 10.095 31.41 24.568 37.918-.639 4.135-.99 8.328-.99 12.576.0 63.977 74.469 115.836 166.33 115.836s166.334-51.859 166.334-115.836c0-4.218-.347-8.387-.977-12.493 14.564-6.47 24.735-21.034 24.735-38.001zM326.526 373.831c-20.27 20.241-59.115 21.816-70.534 21.816-11.428.0-50.277-1.575-70.522-21.82-3.007-3.008-3.007-7.882.0-10.889 3.003-2.999 7.882-3.003 10.885.0 12.777 12.781 40.11 17.317 59.637 17.317 19.522.0 46.86-4.536 59.657-17.321 3.016-2.999 7.886-2.995 10.885.008 3.008 3.011 3.003 7.882-.008 10.889zm-5.23-48.781c-16.373.0-29.701-13.324-29.701-29.698.0-16.381 13.328-29.714 29.701-29.714 16.378.0 29.706 13.333 29.706 29.714.0 16.374-13.328 29.698-29.706 29.698zM160.91 295.348c0-16.381 13.328-29.71 29.714-29.71 16.369.0 29.689 13.329 29.689 29.71.0 16.373-13.32 29.693-29.689 29.693-16.386.0-29.714-13.32-29.714-29.693z"/></svg>
+</a>
+<a target=_blank rel="noopener noreferrer" aria-label="share Adding dbt to your Fivetran pipeline on facebook" href="https://facebook.com/sharer/sharer.php?u=https%3a%2f%2fevolvconsulting.github.io%2fposts%2fben-jenkins%2ffivetran-dbt-snowflake-tutorial1%2f"><svg viewBox="0 0 512 512"><path d="M449.446.0C483.971.0 512 28.03 512 62.554v386.892C512 483.97 483.97 512 449.446 512H342.978V319.085h66.6l12.672-82.621h-79.272v-53.617c0-22.603 11.073-44.636 46.58-44.636H425.6v-70.34s-32.71-5.582-63.982-5.582c-65.288.0-107.96 39.569-107.96 111.204v62.971h-72.573v82.621h72.573V512h-191.104c-34.524.0-62.554-28.03-62.554-62.554V62.554c0-34.524 28.029-62.554 62.554-62.554h386.892z"/></svg>
+</a>
+<a target=_blank rel="noopener noreferrer" aria-label="share Adding dbt to your Fivetran pipeline on whatsapp" href="https://api.whatsapp.com/send?text=Adding%20dbt%20to%20your%20Fivetran%20pipeline%20-%20https%3a%2f%2fevolvconsulting.github.io%2fposts%2fben-jenkins%2ffivetran-dbt-snowflake-tutorial1%2f"><svg viewBox="0 0 512 512"><path d="M449.446.0C483.971.0 512 28.03 512 62.554v386.892C512 483.97 483.97 512 449.446 512H62.554c-34.524.0-62.554-28.03-62.554-62.554V62.554c0-34.524 28.029-62.554 62.554-62.554h386.892zm-58.673 127.703c-33.842-33.881-78.847-52.548-126.798-52.568-98.799.0-179.21 80.405-179.249 179.234-.013 31.593 8.241 62.428 23.927 89.612l-25.429 92.884 95.021-24.925c26.181 14.28 55.659 21.807 85.658 21.816h.074c98.789.0 179.206-80.413 179.247-179.243.018-47.895-18.61-92.93-52.451-126.81zM263.976 403.485h-.06c-26.734-.01-52.954-7.193-75.828-20.767l-5.441-3.229-56.386 14.792 15.05-54.977-3.542-5.637c-14.913-23.72-22.791-51.136-22.779-79.287.033-82.142 66.867-148.971 149.046-148.971 39.793.014 77.199 15.531 105.329 43.692 28.128 28.16 43.609 65.592 43.594 105.4-.034 82.149-66.866 148.983-148.983 148.984zm81.721-111.581c-4.479-2.242-26.499-13.075-30.604-14.571-4.105-1.495-7.091-2.241-10.077 2.241-2.986 4.483-11.569 14.572-14.182 17.562-2.612 2.988-5.225 3.364-9.703 1.12-4.479-2.241-18.91-6.97-36.017-22.23C231.8 264.15 222.81 249.484 220.198 245s-.279-6.908 1.963-9.14c2.016-2.007 4.48-5.232 6.719-7.847 2.24-2.615 2.986-4.484 4.479-7.472 1.493-2.99.747-5.604-.374-7.846-1.119-2.241-10.077-24.288-13.809-33.256-3.635-8.733-7.327-7.55-10.077-7.688-2.609-.13-5.598-.158-8.583-.158-2.986.0-7.839 1.121-11.944 5.604-4.105 4.484-15.675 15.32-15.675 37.364.0 22.046 16.048 43.342 18.287 46.332 2.24 2.99 31.582 48.227 76.511 67.627 10.685 4.615 19.028 7.371 25.533 9.434 10.728 3.41 20.492 2.929 28.209 1.775 8.605-1.285 26.499-10.833 30.231-21.295 3.732-10.464 3.732-19.431 2.612-21.298-1.119-1.869-4.105-2.99-8.583-5.232z"/></svg>
+</a>
+<a target=_blank rel="noopener noreferrer" aria-label="share Adding dbt to your Fivetran pipeline on telegram" href="https://telegram.me/share/url?text=Adding%20dbt%20to%20your%20Fivetran%20pipeline&url=https%3a%2f%2fevolvconsulting.github.io%2fposts%2fben-jenkins%2ffivetran-dbt-snowflake-tutorial1%2f"><svg viewBox="2 2 28 28"><path d="M26.49 29.86H5.5a3.37 3.37.0 01-2.47-1 3.35 3.35.0 01-1-2.47V5.48A3.36 3.36.0 013 3 3.37 3.37.0 015.5 2h21A3.38 3.38.0 0129 3a3.36 3.36.0 011 2.46V26.37a3.35 3.35.0 01-1 2.47 3.38 3.38.0 01-2.51 1.02zm-5.38-6.71a.79.79.0 00.85-.66L24.73 9.24a.55.55.0 00-.18-.46.62.62.0 00-.41-.17q-.08.0-16.53 6.11a.59.59.0 00-.41.59.57.57.0 00.43.52l4 1.24 1.61 4.83a.62.62.0 00.63.43.56.56.0 00.4-.17L16.54 20l4.09 3A.9.9.0 0021.11 23.15zM13.8 20.71l-1.21-4q8.72-5.55 8.78-5.55c.15.0.23.0.23.16a.18.18.0 010 .06s-2.51 2.3-7.52 6.8z"/></svg>
+</a>
+</div>
+</footer>
+</article>
+</main>
+<footer class=footer>
+<span>&copy; 2022 <a href=https://evolvconsulting.github.io>evolv technology blog</a></span>
+<span>
+Powered by
+<a href=https://gohugo.io/ rel="noopener noreferrer" target=_blank>Hugo</a> &
+        <a href=https://git.io/hugopapermod rel=noopener target=_blank>PaperMod</a>
+</span>
+</footer>
+<a href=#top aria-label="go to top" title="Go to Top (Alt + G)" class=top-link id=top-link accesskey=g><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 12 6" fill="currentcolor"><path d="M12 6H0l6-6z"/></svg>
+</a>
+<script>let menu=document.getElementById('menu');menu&&(menu.scrollLeft=localStorage.getItem("menu-scroll-position"),menu.onscroll=function(){localStorage.setItem("menu-scroll-position",menu.scrollLeft)}),document.querySelectorAll('a[href^="#"]').forEach(a=>{a.addEventListener("click",function(b){b.preventDefault();var a=this.getAttribute("href").substr(1);window.matchMedia('(prefers-reduced-motion: reduce)').matches?document.querySelector(`[id='${decodeURIComponent(a)}']`).scrollIntoView():document.querySelector(`[id='${decodeURIComponent(a)}']`).scrollIntoView({behavior:"smooth"}),a==="top"?history.replaceState(null,null," "):history.pushState(null,null,`#${a}`)})})</script>
+<script>var mybutton=document.getElementById("top-link");window.onscroll=function(){document.body.scrollTop>800||document.documentElement.scrollTop>800?(mybutton.style.visibility="visible",mybutton.style.opacity="1"):(mybutton.style.visibility="hidden",mybutton.style.opacity="0")}</script>
+<script>document.getElementById("theme-toggle").addEventListener("click",()=>{document.body.className.includes("dark")?(document.body.classList.remove('dark'),localStorage.setItem("pref-theme",'light')):(document.body.classList.add('dark'),localStorage.setItem("pref-theme",'dark'))})</script>
+<script>document.querySelectorAll('pre > code').forEach(b=>{const c=b.parentNode.parentNode,a=document.createElement('button');a.classList.add('copy-code'),a.innerText='copy';function d(){a.innerText='copied!',setTimeout(()=>{a.innerText='copy'},2e3)}a.addEventListener('click',e=>{if('clipboard'in navigator){navigator.clipboard.writeText(b.textContent),d();return}const a=document.createRange();a.selectNodeContents(b);const c=window.getSelection();c.removeAllRanges(),c.addRange(a);try{document.execCommand('copy'),d()}catch(a){}c.removeRange(a)}),c.classList.contains("highlight")?c.appendChild(a):c.parentNode.firstChild==c||(b.parentNode.parentNode.parentNode.parentNode.parentNode.nodeName=="TABLE"?b.parentNode.parentNode.parentNode.parentNode.parentNode.appendChild(a):b.parentNode.appendChild(a))})</script>
+</body>
+</html>
